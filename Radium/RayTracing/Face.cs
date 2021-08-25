@@ -85,21 +85,21 @@ namespace Radium.RayTracing {
             // calc normal
             var normal = GetInternalPointNormal(p);
 #if DEBUG
-            if (need_draw)
-                debug.NewVector(p, normal);
+            //if (need_draw)
+            //    debug.NewVector(p, normal);
 #endif
 
             // for each light, calc diffuse and specular
             foreach (var light in lightList) {
                 var L = light.GetDirectionFromPointToSource(p);
 #if DEBUG
-                if (need_draw)
+                if (need_draw && light is SunLight)
                     debug.NewVector(p, L);
 #endif
                 var V =-ray.direction;
                 var LN = L * normal;
                 if (LN < 0) continue;
-                result = result + (light.GetColor() * material.diffuse * LN);
+                result = result + (light.GetColor(p) * material.diffuse * LN);
 
                 V.SetUnit();
                 var H = L + V;
@@ -107,7 +107,7 @@ namespace Radium.RayTracing {
 
                 var HN = H * normal;
                 if (HN < 0) continue;
-                result = result + (light.GetColor() * material.specular *
+                result = result + (light.GetColor(p) * material.specular *
                     Math.Pow(HN, material.specularN));
             }
 

@@ -101,9 +101,10 @@ namespace Radium.RayTracing {
             }
             if (!has_picked) throw new Exception("Impossible boundingbox");
 
-            // 保证tmin < tmax，且都不是负数。负数表示反向相交，不保留；一正一负表示视点在物体内部，仍然保留
+            // 保证tmin <= tmax，且都不是负数。负数表示反向相交，不保留；一正一负表示视点在物体内部，仍然保留
+            // 等于是为了平面也可以渲染的要求
             // consideration
-            if (tmin >= tmax) return false;
+            if (tmin > tmax) return false;
             //if (tmin < 0 && tmax < 0) return false;
             return true;
         }

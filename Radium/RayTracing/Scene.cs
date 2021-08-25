@@ -50,9 +50,21 @@ namespace Radium.RayTracing {
                 materialList[i] = new Material(br);
             }
 
+            // read texture
+            var textureCount = br.ReadUInt32();
+            textureList = new Texture[textureCount];
+            for (UInt32 i = 0; i < textureCount; i++) {
+                textureList[i] = new Texture(br);
+            }
+
             // fill mesh obj data
             foreach (var obj in meshObjectList) {
                 obj.FillData(materialList);
+            }
+
+            // fill texture data
+            foreach (var mat in materialList) {
+                mat.FillData(textureList);
             }
 
             br.Close();
@@ -66,10 +78,11 @@ namespace Radium.RayTracing {
         private Camera[] cameraList;
         private Light[] lightList;
         private Material[] materialList;
+        private Texture[] textureList;
 
         public void Render(UInt32 imgWidth) {
 #if DEBUG
-            var debug = new Radium.Utils.TracingDebug(true);
+            var debug = new Radium.Utils.TracingDebug(false);
             UInt32 debug_counter = 0;
 #endif
 

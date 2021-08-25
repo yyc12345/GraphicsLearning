@@ -92,7 +92,11 @@ def export_rs(context, filepath):
                 # sun light don't need location
                 # write direction
                 direction = mathutils.Vector((0, 0, -1))
-                direction.rotate(oCamera.rotation_euler)
+                #direction.rotate(oCamera.rotation_euler)
+                direction = direction @ oLight.matrix_world
+                position = mathutils.Vector(oLight.location)
+                direction = direction - position
+                direction.normalize()
                 write_3dvector(fs, direction)
                 # write color
                 write_color(fs, oLight.data.color)
@@ -176,27 +180,96 @@ def export_rs(context, filepath):
 
         # write material
         write_uint32(fs, len(materialList))
+        textureSet = set()
+        textureList = []
+        textureCount = 0
         for oMaterial in materialList:
-            # get basic color
             mat_wrap = node_shader_utils.PrincipledBSDFWrapper(oMaterial)
-            if mat_wrap:
-                material_colAmbient = (1.0, 1.0, 1.0)
-                material_colDiffuse = (mat_wrap.base_color[0], mat_wrap.base_color[1], mat_wrap.base_color[2])
-                material_colSpecular = (mat_wrap.specular, mat_wrap.specular, mat_wrap.specular)
-                material_specularN = (1 - mat_wrap.roughness) * 128.0
-
-            else:
+            if not mat_wrap:
                 # no Principled BSDF. write garbage
                 material_colAmbient = (1.0, 1.0, 1.0)
                 material_colDiffuse = (1.0, 1.0, 1.0)
                 material_colSpecular = (1.0, 1.0, 1.0)
                 material_specularN = 64.0
+                material_kr = 0.0
+                material_kt = 0.0
+
+                material_useBaseColorTexture = False
+                material_baseColorTexture = 0
+                material_useNormalmapTexture = False
+                material_normalmapTexture = 0
+
+            else:
+                # get basic color
+                material_colAmbient = (1.0, 1.0, 1.0)
+                material_colDiffuse = (mat_wrap.base_color[0], mat_wrap.base_color[1], mat_wrap.base_color[2])
+                material_colSpecular = (mat_wrap.specular, mat_wrap.specular, mat_wrap.specular)
+                material_specularN = (1 - mat_wrap.roughness) * 128.0
+                material_kr = mat_wrap.metallic
+                material_kt = mat_wrap.transmission
+
+                # get base color texture
+                base_color_texture = get_material_texture(mat_wrap, "base_color_texture")
+                if base_color_texture:
+                    if base_color_texture not in textureSet:
+                        textureSet.add(base_color_texture)
+                        textureList.append(base_color_texture)
+                        currentTexture = textureCount
+                    else:
+                        currentTexture = textureList.index(base_color_texture)
+
+                    material_useBaseColorTexture = True
+                    material_baseColorTexture = currentTexture
+                else:
+                    material_useBaseColorTexture = False
+                    material_baseColorTexture = 0
+
+
+                # get normalmap texture
+                normalmap_texture = get_material_texture(mat_wrap, "normalmap_texture")
+                if normalmap_texture:
+                    if normalmap_texture not in textureSet:
+                        textureSet.add(normalmap_texture)
+                        textureList.append(normalmap_texture)
+                        currentTexture = textureCount
+                    else:
+                        currentTexture = textureList.index(normalmap_texture)
+
+                    material_useNormalmapTexture = True
+                    material_normalmapTexture = currentTexture
+                else:
+                    material_useNormalmapTexture = False
+                    material_normalmapTexture = 0
 
             write_color(fs, material_colAmbient)
             write_color(fs, material_colDiffuse)
             write_color(fs, material_colSpecular)
             write_float(fs, material_specularN)
+            write_float(fs, material_kr)
+            write_float(fs, material_kt)
+            write_bool(fs, material_useBaseColorTexture)
+            write_uint32(fs, material_baseColorTexture)
+            write_bool(fs, material_useNormalmapTexture)
+            write_uint32(fs, material_normalmapTexture)
         
+        # write texture
+        write_uint32(fs, len(textureList))
+        for oTexture in textureList:
+            # write size first
+            width = oTexture.size[0]
+            height = oTexture.size[1]
+            write_uint32(fs, width)
+            write_uint32(fs, height)
+
+            counter = 0
+            pixels = oTexture.pixels[:]
+            for p in pixels:
+                # drop alpha channel
+                if counter == 3:
+                    counter = 0
+                else:
+                    write_float(fs, p)
+                    counter += 1
 
 
     '''
@@ -495,6 +568,15 @@ def mesh_triangulate(me):
     bmesh.ops.triangulate(bm, faces=bm.faces)
     bm.to_mesh(me)
     bm.free()
+
+def get_material_texture(mat_wrap, texture_name):
+    tex_wrap = getattr(mat_wrap, texture_name, None)
+    if not tex_wrap:
+        return None
+    image = tex_wrap.image
+    if not image:
+        return None
+    return image
 
 # ======================================================================================= file io assistant
 
