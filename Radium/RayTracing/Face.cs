@@ -30,81 +30,97 @@ namespace Radium.RayTracing {
         public Material material;
 
         // assitant variable for intersection calc
-        // 两个基础平面向量
-        Vector3D v12, v23;
-        // 平面法向量和隐式方程参数D
-        Vector3D faceN;
-        double faceD;
-        // 三角形面片面积
-        double faceSquare;
+        // used in weight
+        double weight_denominator;
+        // used in intersection
+        Vector3D e1, e2;
 
-        public void FillData(Point3D[] vecList, Vector3D[] nmlList, Point2D[] uvList, Material[] matList) {
-            p1 = vecList[v1];
-            p2 = vecList[v2];
-            p3 = vecList[v3];
+        public void FillData(MeshObject obj, Scene scene) {
+            p1 = obj.vecList[v1];
+            p2 = obj.vecList[v2];
+            p3 = obj.vecList[v3];
 
-            nml1 = nmlList[vn1];
-            nml2 = nmlList[vn2];
-            nml3 = nmlList[vn3];
+            nml1 = obj.normalList[vn1];
+            nml2 = obj.normalList[vn2];
+            nml3 = obj.normalList[vn3];
 
-            uv1 = uvList[vt1];
-            uv2 = uvList[vt2];
-            uv3 = uvList[vt3];
+            uv1 = obj.uvList[vt1];
+            uv2 = obj.uvList[vt2];
+            uv3 = obj.uvList[vt3];
 
-            if (useMaterial) material = matList[matIndex];
+            if (useMaterial) material = scene.materialList[matIndex];
             else material = UtilFunc.DEFAULT_MATERIAL;
 
             // construct some internal variables
-            v12 = p2 - p1;
-            v23 = p3 - p2;
+            var mat = new Matrix3x3(new Vector3D(p1), new Vector3D(p2), new Vector3D(p3), true);
+            this.weight_denominator = mat.Det();
+            if (this.weight_denominator == 0) throw new Exception("GetWeight() zero denominator");
 
-            // 使用blender的右手坐标系，则使用右手定则，逆时针绕三角形面片为正向
-            faceN = v12 ^ v23;
-            faceN.SetUnit();
-            faceD = -(faceN * new Vector3D(p1));
-
-            var cache = (-v12) ^ v23;
-            faceSquare = cache.GetLen() / 2;
+            this.e1 = p1 - p2;
+            this.e2 = p1 - p3;
         }
 
-        public Vector3D GetInternalPointNormal(Point3D p) {
-            GetWeight(p, out double w1, out double w2, out double w3);
+        public Vector3D GetInternalPointNormal(Point3D p, double w1, double w2, double w3) {
             var intersected_point = nml1 * w1 + nml2 * w2 + nml3 * w3;
             intersected_point.SetUnit();
             return intersected_point;
         }
 
+        public Color GetDiffuse(Point3D p, double w1, double w2, double w3) {
+            if (material.base_color_texture == null) return material.diffuse;
+
+            // intersect and convert uv to xy system
+            var intersected_uv = uv1 * w1 + uv2 * w2 + uv3 * w3;
+            return material.base_color_texture.GetPixel(intersected_uv.x, intersected_uv.y);
+        }
+
 #if DEBUG
-        public Color GetLocalColor(Beam ray, Point3D p, Light[] lightList, Radium.Utils.TracingDebug debug, bool need_draw) {
+        public Color GetLocalColor(Beam ray, Point3D p, Scene scene, Radium.Utils.TracingDebug debug, bool need_draw) {
 #else
-        public Color GetLocalColor(Beam ray, Point3D p, Light[] lightList) {
+        public Color GetLocalColor(Beam ray, Point3D p, Scene scene) {
 #endif
             // ambient
             var result = material.ambient * UtilFunc.DEFAULT_AMBIENT;
 
             // calc normal
-            var normal = GetInternalPointNormal(p);
+            GetWeight(p, out double w1, out double w2, out double w3);
+            var normal = GetInternalPointNormal(p, w1, w2, w3);
+            var diffuse_color = GetDiffuse(p, w1, w2, w3);
+
 #if DEBUG
             //if (need_draw)
             //    debug.NewVector(p, normal);
 #endif
 
             // for each light, calc diffuse and specular
-            foreach (var light in lightList) {
+            foreach (var light in scene.lightList) {
                 var L = light.GetDirectionFromPointToSource(p);
 #if DEBUG
-                if (need_draw && light is SunLight)
-                    debug.NewVector(p, L);
+                //if (need_draw && light is SunLight)
+                //    debug.NewVector(p, L);
 #endif
+                // shadow confirm
+                var newray = new Beam(L, p);
+                var in_shadow = false;
+                foreach(var obj in scene.meshObjectList) {
+                    if (obj.HaveIntersection(newray, light.GetDistance(p))) {
+                        in_shadow = true;
+                        break;
+                    }
+                }
+                if (in_shadow) continue;    // if in shadow, skip this light
+
+                // calc diffuse
                 var V =-ray.direction;
                 var LN = L * normal;
                 if (LN < 0) continue;
-                result = result + (light.GetColor(p) * material.diffuse * LN);
+                result = result + (light.GetColor(p) * diffuse_color * LN);
 
                 V.SetUnit();
                 var H = L + V;
                 H.SetUnit();
 
+                // calc specular
                 var HN = H * normal;
                 if (HN < 0) continue;
                 result = result + (light.GetColor(p) * material.specular *
@@ -117,16 +133,17 @@ namespace Radium.RayTracing {
         public void GetWeight(Point3D p, out double w1, out double w2, out double w3) {
             w1 = w2 = w3 = 0;
 
-            var mat = new Matrix3x3(new Vector3D(p1), new Vector3D(p2), new Vector3D(p3), true);
-            var denominator = mat.Det();
-            if (denominator == 0) throw new Exception("GetWeight() zero denominator");
+            // have calculated
+            //var mat = new Matrix3x3(new Vector3D(p1), new Vector3D(p2), new Vector3D(p3), true);
+            //var denominator = mat.Det();
+            //if (denominator == 0) throw new Exception("GetWeight() zero denominator");
 
-            mat = new Matrix3x3(new Vector3D(p), new Vector3D(p2), new Vector3D(p3), true);
-            w1 = mat.Det() / denominator;
+            var mat = new Matrix3x3(new Vector3D(p), new Vector3D(p2), new Vector3D(p3), true);
+            w1 = mat.Det() / weight_denominator;
             mat = new Matrix3x3(new Vector3D(p1), new Vector3D(p), new Vector3D(p3), true);
-            w2 = mat.Det() / denominator;
+            w2 = mat.Det() / weight_denominator;
             mat = new Matrix3x3(new Vector3D(p1), new Vector3D(p2), new Vector3D(p), true);
-            w3 = mat.Det() / denominator;
+            w3 = mat.Det() / weight_denominator;
 
             if (w1 < 0 || w1 > 1 || w2 < 0 || w2 > 1 || w3 < 0 || w3 > 1) {
                 var cache = new Vector3D(w1, w2, w3);
@@ -164,8 +181,9 @@ namespace Radium.RayTracing {
             t = 0;
             intersection = null;
 
-            var e1 = p1 - p2;
-            var e2 = p1 - p3;
+            // have calculated
+            //var e1 = p1 - p2;
+            //var e2 = p1 - p3;
             var s = p1 - ray.source;
 
             var mat = new Matrix3x3(ray.direction, e1, e2, true);
@@ -179,7 +197,7 @@ namespace Radium.RayTracing {
             mat = new Matrix3x3(ray.direction, e1, s, true);
             var gamma = mat.Det() / denominator;
 
-            if (t <= 0) return false;
+            if (t <= UtilFunc.TOLERANCE) return false;
             if (beta < 0 || beta > 1 || gamma < 0 || gamma > 1 || gamma + beta > 1) return false;
 
             intersection = ray.source + (ray.direction * t);

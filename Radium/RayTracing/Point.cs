@@ -13,12 +13,16 @@ namespace Radium.RayTracing {
         public Point3D(double newx, double newy, double newz) { x = newx; y = newy; z = newz; }
         public Point3D(Vector3D v) { x = v.x; y = v.y; z = v.z; }
 
+        //点加点
+        public static Point3D operator +(Point3D u, Point3D v) { return new Point3D(u.x + v.x, u.y + v.y, u.z + v.z); }
         //点加向量
         public static Point3D operator +(Point3D u, Vector3D v) { return new Point3D(u.x + v.x, u.y + v.y, u.z + v.z); }
         //点减向量
         public static Point3D operator -(Point3D u, Vector3D v) { return new Point3D(u.x - v.x, u.y - v.y, u.z - v.z); }
         //两点相减
-        public static Vector3D operator -(Point3D u, Point3D v) { return new Vector3D(u.x - v.x, u.y - v.y, u.z - v.z); }
+        public static Vector3D operator -(Point3D u, Point3D v) { return new Vector3D(u.x - v.x, u.y - v.y, u.z - v.z); }        
+        //数乘
+        public static Point3D operator *(Point3D u, double num) { return new Point3D(u.x * num, u.y * num, u.z * num); }
         //单目减
         public static Point3D operator -(Point3D u) { return new Point3D(-u.x, -u.y, -u.z); }
 
@@ -39,12 +43,16 @@ namespace Radium.RayTracing {
         public Point2D(double newx, double newy) { x = newx; y = newy; }
         public Point2D(Vector2D v) { x = v.x; y = v.y; }
 
+        //点加点
+        public static Point2D operator +(Point2D u, Point2D v) { return new Point2D(u.x + v.x, u.y + v.y); }
         //点加向量
         public static Point2D operator +(Point2D u, Vector3D v) { return new Point2D(u.x + v.x, u.y + v.y); }
         //点减向量
         public static Point2D operator -(Point2D u, Vector3D v) { return new Point2D(u.x - v.x, u.y - v.y); }
         //两点相减
         public static Vector2D operator -(Point2D u, Point2D v) { return new Vector2D(v.x - u.x, v.y - u.y); }
+        //数乘
+        public static Point2D operator *(Point2D u, double num) { return new Point2D(u.x * num, u.y * num); }
         //单目减
         public static Point2D operator -(Point2D u) { return new Point2D(-u.x, -u.y); }
 

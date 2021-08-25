@@ -7,7 +7,11 @@ using System.Threading.Tasks;
 namespace Radium.RayTracing {
     public static class UtilFunc {
 
-        public static readonly double TOLERANCE = 1e-9;
+        public static readonly UInt32 MAX_DEPTH = 1;
+
+        public static readonly double MIN_WEIGHT = 0.05;
+
+        public static readonly double TOLERANCE = 1e-7;
 
         public static readonly Material DEFAULT_MATERIAL = new Material();
 

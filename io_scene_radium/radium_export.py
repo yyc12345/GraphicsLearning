@@ -215,6 +215,7 @@ def export_rs(context, filepath):
                         textureSet.add(base_color_texture)
                         textureList.append(base_color_texture)
                         currentTexture = textureCount
+                        textureCount += 1
                     else:
                         currentTexture = textureList.index(base_color_texture)
 
@@ -232,6 +233,7 @@ def export_rs(context, filepath):
                         textureSet.add(normalmap_texture)
                         textureList.append(normalmap_texture)
                         currentTexture = textureCount
+                        textureCount += 1
                     else:
                         currentTexture = textureList.index(normalmap_texture)
 

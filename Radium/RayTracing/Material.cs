@@ -50,11 +50,11 @@ namespace Radium.RayTracing {
         public UInt32 index_base_color_texture, index_normalmap_texture;
         public Texture base_color_texture, normalmap_texture;   // use this to confirm whis material whether use texture, not use `use_` variable, it just the field read from file
 
-        public void FillData(Texture[] textureList) {
-            if (use_base_color_texture) base_color_texture = textureList[index_base_color_texture];
+        public void FillData(Scene scene) {
+            if (use_base_color_texture) base_color_texture = scene.textureList[index_base_color_texture];
             else base_color_texture = null;
 
-            if (use_normalmap_texture) normalmap_texture = textureList[index_normalmap_texture];
+            if (use_normalmap_texture) normalmap_texture = scene.textureList[index_normalmap_texture];
             else normalmap_texture = null;
         }
     }

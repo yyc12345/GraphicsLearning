@@ -17,6 +17,10 @@ namespace Radium.RayTracing {
             throw new NotImplementedException();
         }
 
+        public virtual double GetDistance(Point3D p) {
+            throw new NotImplementedException();
+        }
+
         public virtual Color GetColor(Point3D target) {
             throw new NotImplementedException();
         }
@@ -35,6 +39,11 @@ namespace Radium.RayTracing {
             var cache = position - p;
             cache.SetUnit();
             return cache;
+        }
+
+        public override double GetDistance(Point3D p) {
+            var cache = position - p;
+            return cache.GetLen();
         }
 
         public override Color GetColor(Point3D target) {
@@ -56,6 +65,10 @@ namespace Radium.RayTracing {
 
         public override Vector3D GetDirectionFromPointToSource(Point3D p) {
             return -direction;
+        }
+
+        public override double GetDistance(Point3D p) {
+            return Double.PositiveInfinity;
         }
 
         public override Color GetColor(Point3D target) {

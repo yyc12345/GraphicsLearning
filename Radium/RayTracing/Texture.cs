@@ -33,6 +33,14 @@ namespace Radium.RayTracing {
         public UInt32 width, height;
 
         public RayTracing.Color GetPixel(double x, double y) {
+            // conv uv to xy
+            y = 1 - y;
+            x = x - Math.Truncate(x);
+            y = y - Math.Truncate(y);
+
+            x *= width - 1;
+            y *= height - 1;
+
             // clamp
             if (x < 0) x = 0;
             if (x > width - 1) x = width - 1;

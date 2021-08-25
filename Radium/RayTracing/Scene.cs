@@ -59,12 +59,12 @@ namespace Radium.RayTracing {
 
             // fill mesh obj data
             foreach (var obj in meshObjectList) {
-                obj.FillData(materialList);
+                obj.FillData(this);
             }
 
             // fill texture data
             foreach (var mat in materialList) {
-                mat.FillData(textureList);
+                mat.FillData(this);
             }
 
             br.Close();
@@ -74,11 +74,11 @@ namespace Radium.RayTracing {
         private const UInt32 MAGIC_WORDS = 61;
         private const UInt32 RS_CURRENT_VERSION = 0;
 
-        private MeshObject[] meshObjectList;
-        private Camera[] cameraList;
-        private Light[] lightList;
-        private Material[] materialList;
-        private Texture[] textureList;
+        public MeshObject[] meshObjectList;
+        public Camera[] cameraList;
+        public Light[] lightList;
+        public Material[] materialList;
+        public Texture[] textureList;
 
         public void Render(UInt32 imgWidth) {
 #if DEBUG
@@ -122,9 +122,9 @@ namespace Radium.RayTracing {
                         var ray = new Beam(direction, camera.location);
 #if DEBUG
                         //debug.NewCameraCasting(direction);
-                        var color = TracingOneRay(ray, 0, 1.0f, debug, x % 10 == 0 && y % 10 == 0);
+                        var color = TracingOneRay(ray, 0, 1.0, debug, x % 5 == 0 && y % 5 == 0);
 #else
-                        var color = TracingOneRay(ray, 0, 1.0f);
+                        var color = TracingOneRay(ray, 0, 1.0);
 #endif
                         color = color * 255;
                         bitmap.SetPixel((int)x, (int)y, new Utils.Color(color));
@@ -139,10 +139,15 @@ namespace Radium.RayTracing {
         }
 
 #if DEBUG
-        public Color TracingOneRay(Beam ray, UInt32 depth, float weight, Radium.Utils.TracingDebug debug, bool need_draw) {
+        public Color TracingOneRay(Beam ray, UInt32 depth, double weight, Radium.Utils.TracingDebug debug, bool need_draw) {
 #else
-        public Color TracingOneRay(Beam ray, UInt32 depth, float weight) {
+        public Color TracingOneRay(Beam ray, UInt32 depth, double weight) {
 #endif
+            // test depth and weight first
+            if (depth > UtilFunc.MAX_DEPTH || weight < UtilFunc.MIN_WEIGHT)
+                return new Color(0, 0, 0);
+
+            // test intersection
             double intersection_t;
             Point3D intersection_point;
             Face intersection_face;
@@ -160,13 +165,33 @@ namespace Radium.RayTracing {
 
             // calc local color
 #if DEBUG
-            var local_color = intersection_face.GetLocalColor(ray, intersection_point, lightList, debug, need_draw);
+            var local_color = intersection_face.GetLocalColor(ray, intersection_point, this, debug, need_draw);
 #else
-            var local_color = intersection_face.GetLocalColor(ray, intersection_point, lightList);
+            var local_color = intersection_face.GetLocalColor(ray, intersection_point, this);
 #endif
 
+            intersection_face.GetWeight(intersection_point, out double face_w1, out double face_w2, out double face_w3);
+            var normal = intersection_face.GetInternalPointNormal(intersection_point, face_w1, face_w2, face_w3);
+            var v = -ray.direction;
+            // calc kr
+            Color rColor = null;
+            if (v * normal < 0) rColor = new Color(0.0, 0.0, 0.0);
+            else {
+                var direction = normal * 2 * (normal * v) - v;
+                direction.SetUnit();
+                var rray = new Beam(direction, intersection_point);
+#if DEBUG
+                rColor = TracingOneRay(rray, depth + 1, weight * intersection_face.material.kr, debug, need_draw);
+#else
+                rColor = TracingOneRay(rray, depth + 1, weight * intersection_face.material.kr);
+#endif
+            }
+
+            // calc kt
+
+
             // combine color
-            var final_color = new Color(local_color);
+            var final_color = local_color + rColor;
 
             // clamp
             if (final_color.r > 1) final_color.r = 1;

@@ -46,20 +46,23 @@ namespace Radium.RayTracing {
         public Face[] faceList;
         public BoundingBox boundingbox;
 
-        public void FillData(Material[] materialList) {
+        public void FillData(Scene scene) {
             foreach(var face in faceList) {
-                face.FillData(vecList, normalList, uvList, materialList);
+                face.FillData(this, scene);
             }
         }
 
         // 用于阴影检测，只要有焦点，就返回
-        public bool HaveIntersection(Beam ray) {
+        public bool HaveIntersection(Beam ray, double stop_value) {
             if (!boundingbox.IsIntersected(ray)) return false;
 
             Point3D vec;
             double t;
             foreach(var face in faceList) {
-                if (face.GetIntersection(ray, out t, out vec)) return true;
+                if (face.GetIntersection(ray, out t, out vec)) {
+                    if (t > stop_value) continue;   // if the face far than light, also continue, because ray.direction is normalized vector, so compare t and stop_value directly
+                    else return true;
+                }
             }
             return false;
         }
