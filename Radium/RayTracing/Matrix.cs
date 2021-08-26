@@ -47,5 +47,14 @@ namespace Radium.RayTracing {
                 e13 * e22 * e31;
         }
 
+        //矩阵变换
+        public static Vector3D operator *(Matrix3x3 m, Vector3D v) {
+            return new Vector3D(
+                m.e11 * v.x + m.e12 * v.y + m.e13 * v.z,
+                m.e21 * v.x + m.e22 * v.y + m.e23 * v.z,
+                m.e31 * v.x + m.e32 * v.y + m.e33 * v.z
+            );
+        }
+
     }
 }

@@ -191,6 +191,7 @@ def export_rs(context, filepath):
                 material_colDiffuse = (1.0, 1.0, 1.0)
                 material_colSpecular = (1.0, 1.0, 1.0)
                 material_specularN = 64.0
+                material_ior = 1.45
                 material_kr = 0.0
                 material_kt = 0.0
 
@@ -205,6 +206,7 @@ def export_rs(context, filepath):
                 material_colDiffuse = (mat_wrap.base_color[0], mat_wrap.base_color[1], mat_wrap.base_color[2])
                 material_colSpecular = (mat_wrap.specular, mat_wrap.specular, mat_wrap.specular)
                 material_specularN = (1 - mat_wrap.roughness) * 128.0
+                material_ior = mat_wrap.ior
                 material_kr = mat_wrap.metallic
                 material_kt = mat_wrap.transmission
 
@@ -247,6 +249,7 @@ def export_rs(context, filepath):
             write_color(fs, material_colDiffuse)
             write_color(fs, material_colSpecular)
             write_float(fs, material_specularN)
+            write_float(fs, material_ior)
             write_float(fs, material_kr)
             write_float(fs, material_kt)
             write_bool(fs, material_useBaseColorTexture)

@@ -32,11 +32,10 @@ namespace Radium.RayTracing {
         public TextureRGB[,] pixels;
         public UInt32 width, height;
 
-        public RayTracing.Color GetPixel(double x, double y) {
-            // conv uv to xy
-            y = 1 - y;
-            x = x - Math.Truncate(x);
-            y = y - Math.Truncate(y);
+        public Vector3D GetPixel(Point2D uv) {
+            // due to blender image.pixels' storage mode, we don't need conv uv to texture xy, because the stored data has been uv coordinate
+            double x = uv.x - Math.Truncate(uv.x);
+            double y = uv.y - Math.Truncate(uv.y);
 
             x *= width - 1;
             y *= height - 1;
@@ -59,9 +58,9 @@ namespace Radium.RayTracing {
             return (midCache1 * (1 - y_percentage) + midCache2 * y_percentage);
         }
 
-        public RayTracing.Color GetPixel(UInt32 x, UInt32 y) {
+        public Vector3D GetPixel(UInt32 x, UInt32 y) {
             var col = pixels[x, y];
-            return new Color(col.r, col.g, col.b);
+            return new Vector3D(col.r, col.g, col.b);
         }
     }
 }

@@ -34,6 +34,8 @@ namespace Radium.RayTracing {
         double weight_denominator;
         // used in intersection
         Vector3D e1, e2;
+        // used in normalmap
+        Vector3D TBN_T;
 
         public void FillData(MeshObject obj, Scene scene) {
             p1 = obj.vecList[v1];
@@ -58,20 +60,50 @@ namespace Radium.RayTracing {
 
             this.e1 = p1 - p2;
             this.e2 = p1 - p3;
+
+            var uv12 = uv2 - uv1;
+            var uv13 = uv3 - uv1;
+            var edge12 = p2 - p1;
+            var edge13 = p3 - p1;
+            var tbn_denominator = 1.0 / (uv12.x * uv13.y - uv13.x * uv12.y);
+            TBN_T = new Vector3D(
+                tbn_denominator * (uv13.y * edge12.x - uv12.y * edge13.x),
+                tbn_denominator * (uv13.y * edge12.y - uv12.y * edge13.y),
+                tbn_denominator * (uv13.y * edge12.z - uv12.y * edge13.z)
+            );
+            TBN_T.SetUnit();
         }
 
         public Vector3D GetInternalPointNormal(Point3D p, double w1, double w2, double w3) {
             var intersected_point = nml1 * w1 + nml2 * w2 + nml3 * w3;
             intersected_point.SetUnit();
-            return intersected_point;
+
+            // if mat don't use normalmap, return directly
+            if (material.normalmap_texture == null) return intersected_point;
+
+            // get normalmap and TBN matrix
+            var intersected_uv = uv1 * w1 + uv2 * w2 + uv3 * w3;
+            var normalmap = material.normalmap_texture.GetPixel(intersected_uv);
+
+            var TBN_B = intersected_point ^ TBN_T;
+            TBN_B.SetUnit();
+            var TBN = new Matrix3x3(TBN_T, TBN_B, intersected_point, true);
+
+            // normalmap 0~1 => -1~1
+            normalmap = normalmap * 2.0 - 1.0;
+            normalmap.SetUnit();
+            // from local space to tangent space
+            normalmap = TBN * normalmap;
+            normalmap.SetUnit();
+            return normalmap;
         }
 
         public Color GetDiffuse(Point3D p, double w1, double w2, double w3) {
             if (material.base_color_texture == null) return material.diffuse;
 
-            // intersect and convert uv to xy system
+            // get intersect uv
             var intersected_uv = uv1 * w1 + uv2 * w2 + uv3 * w3;
-            return material.base_color_texture.GetPixel(intersected_uv.x, intersected_uv.y);
+            return new Color(material.base_color_texture.GetPixel(intersected_uv));
         }
 
 #if DEBUG
@@ -88,8 +120,8 @@ namespace Radium.RayTracing {
             var diffuse_color = GetDiffuse(p, w1, w2, w3);
 
 #if DEBUG
-            //if (need_draw)
-            //    debug.NewVector(p, normal);
+            if (need_draw)
+                debug.NewVector(p, normal);
 #endif
 
             // for each light, calc diffuse and specular

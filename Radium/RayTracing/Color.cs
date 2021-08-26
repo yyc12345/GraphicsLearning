@@ -8,6 +8,8 @@ namespace Radium.RayTracing {
     public class Color {
         public double r, g, b;
 
+
+        public Color(Vector3D p) { r = p.x; g = p.y; b = p.z; }
         public Color(Color p) { r = p.r; g = p.g; b = p.b; }
         public Color() { r = g = b = 0; }
         public Color(double newr, double newg, double newb) { r = newr; g = newg; b = newb; }

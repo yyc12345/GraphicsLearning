@@ -14,6 +14,7 @@ namespace Radium.RayTracing {
             specular = new Color(1, 1, 1);
 
             specularN = 64.0;
+            ior = 1.45;
 
             kr = 0.0;
             kt = 0.0;
@@ -32,6 +33,7 @@ namespace Radium.RayTracing {
             specular = new Color(br.ReadDouble(), br.ReadDouble(), br.ReadDouble());
 
             specularN = br.ReadDouble();
+            ior = br.ReadDouble();
 
             kr = br.ReadDouble();
             kt = br.ReadDouble();
@@ -45,7 +47,7 @@ namespace Radium.RayTracing {
         }
 
         public Color ambient, diffuse, specular;
-        public double specularN, kr, kt;
+        public double specularN, ior, kr, kt;
         public bool use_base_color_texture, use_normalmap_texture;
         public UInt32 index_base_color_texture, index_normalmap_texture;
         public Texture base_color_texture, normalmap_texture;   // use this to confirm whis material whether use texture, not use `use_` variable, it just the field read from file

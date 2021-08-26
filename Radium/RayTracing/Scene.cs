@@ -157,10 +157,10 @@ namespace Radium.RayTracing {
             }
 
 #if DEBUG
-            if (need_draw) {
-                debug.NewBeam(ray.source, intersection_point);
-                debug.NewFace(intersection_face);
-            }
+            //if (need_draw) {
+            //    debug.NewBeam(ray.source, intersection_point);
+            //    //debug.NewFace(intersection_face);
+            //}
 #endif
 
             // calc local color
@@ -175,7 +175,7 @@ namespace Radium.RayTracing {
             var v = -ray.direction;
             // calc kr
             Color rColor = null;
-            if (v * normal < 0) rColor = new Color(0.0, 0.0, 0.0);
+            if (v * normal < UtilFunc.TOLERANCE) rColor = new Color(0.0, 0.0, 0.0);
             else {
                 var direction = normal * 2 * (normal * v) - v;
                 direction.SetUnit();
@@ -188,10 +188,46 @@ namespace Radium.RayTracing {
             }
 
             // calc kt
-
+            Color tColor = null;
+            if (intersection_face.material.ior <= 1 + UtilFunc.TOLERANCE) tColor = new Color(0.0, 0.0, 0.0);
+            else {
+                double cos1, cos2;
+                if (v * normal < UtilFunc.TOLERANCE) {
+                    // inside of object
+                    normal = -normal;
+                    cos1 = normal * v;
+                    double tmp = 1 - Math.Pow(intersection_face.material.ior, 2) * (1 - Math.Pow(cos1, 2));
+                    if (tmp < 0) tColor = new Color(0.0, 0.0, 0.0);
+                    else {
+                        cos2 = Math.Sqrt(tmp);
+                        var direction = -v * intersection_face.material.ior - normal * (cos2 - intersection_face.material.ior * cos1);
+                        direction.SetUnit();
+                        var tray = new Beam(direction, intersection_point);
+#if DEBUG
+                        tColor = TracingOneRay(tray, depth + 1, weight * intersection_face.material.kt, debug, need_draw);
+#else
+                        tColor = TracingOneRay(tray, depth + 1, weight * intersection_face.material.kt);
+#endif
+                    }
+                } else {
+                    // outside of object
+                    cos1 = normal * v;
+                    double eta = 1 / intersection_face.material.ior;
+                    double tmp = 1 - Math.Pow(eta, 2) * (1 - Math.Pow(cos1, 2));
+                    cos2 = Math.Sqrt(tmp);
+                    var _direction = -v * eta - normal * (cos2 - eta * cos1);
+                    _direction.SetUnit();
+                    var _tray = new Beam(_direction, intersection_point);
+#if DEBUG
+                    tColor = TracingOneRay(_tray, depth + 1, weight * intersection_face.material.kt, debug, need_draw);
+#else
+                    tColor = TracingOneRay(_tray, depth + 1, weight * intersection_face.material.kt);
+#endif
+                }
+            }
 
             // combine color
-            var final_color = local_color + rColor;
+            var final_color = (local_color + rColor + tColor) * weight;
 
             // clamp
             if (final_color.r > 1) final_color.r = 1;

@@ -18,6 +18,8 @@ namespace Radium.RayTracing {
         public static Vector3D operator +(Vector3D u, Vector3D v) { return new Vector3D(u.x + v.x, u.y + v.y, u.z + v.z); }
         //矢量减
         public static Vector3D operator -(Vector3D u, Vector3D v) { return new Vector3D(u.x - v.x, u.y - v.y, u.z - v.z); }
+        //数减
+        public static Vector3D operator -(Vector3D u, double num) { return new Vector3D(u.x - num, u.y - num, u.z - num); }
         //矢量乘(点积)
         public static double operator *(Vector3D u, Vector3D v) { return u.x * v.x + u.y * v.y + u.z * v.z; }
         //矢量乘(叉积)
