@@ -74,7 +74,11 @@ namespace Radium.RayTracing {
             TBN_T.SetUnit();
         }
 
+#if DEBUG
+        public Vector3D GetInternalPointNormal(Point3D p, double w1, double w2, double w3, Radium.Utils.TracingDebug debug, bool need_draw) {
+#else
         public Vector3D GetInternalPointNormal(Point3D p, double w1, double w2, double w3) {
+#endif
             var intersected_point = nml1 * w1 + nml2 * w2 + nml3 * w3;
             intersected_point.SetUnit();
 
@@ -85,9 +89,21 @@ namespace Radium.RayTracing {
             var intersected_uv = uv1 * w1 + uv2 * w2 + uv3 * w3;
             var normalmap = material.normalmap_texture.GetPixel(intersected_uv);
 
-            var TBN_B = intersected_point ^ TBN_T;
+            // 判断三角形面序和实际法线方向是否相反，相反就利用纠正的法线(取反)作为TBN_N
+            var tmp = e1 ^ e2;
+            Vector3D TBN_N = intersected_point;
+            if (tmp * intersected_point <= 0) TBN_N = -intersected_point;
+
+            var TBN_B = TBN_T ^ TBN_N;
             TBN_B.SetUnit();
-            var TBN = new Matrix3x3(TBN_T, TBN_B, intersected_point, true);
+            var TBN = new Matrix3x3(TBN_T, TBN_B, TBN_N, true);
+
+#if DEBUG
+            if (need_draw) {
+                debug.NewVector(p, TBN_T);
+                debug.NewVector(p, TBN_B);
+            }
+#endif
 
             // normalmap 0~1 => -1~1
             normalmap = normalmap * 2.0 - 1.0;
@@ -104,62 +120,6 @@ namespace Radium.RayTracing {
             // get intersect uv
             var intersected_uv = uv1 * w1 + uv2 * w2 + uv3 * w3;
             return new Color(material.base_color_texture.GetPixel(intersected_uv));
-        }
-
-#if DEBUG
-        public Color GetLocalColor(Beam ray, Point3D p, Scene scene, Radium.Utils.TracingDebug debug, bool need_draw) {
-#else
-        public Color GetLocalColor(Beam ray, Point3D p, Scene scene) {
-#endif
-            // ambient
-            var result = material.ambient * UtilFunc.DEFAULT_AMBIENT;
-
-            // calc normal
-            GetWeight(p, out double w1, out double w2, out double w3);
-            var normal = GetInternalPointNormal(p, w1, w2, w3);
-            var diffuse_color = GetDiffuse(p, w1, w2, w3);
-
-#if DEBUG
-            if (need_draw)
-                debug.NewVector(p, normal);
-#endif
-
-            // for each light, calc diffuse and specular
-            foreach (var light in scene.lightList) {
-                var L = light.GetDirectionFromPointToSource(p);
-#if DEBUG
-                //if (need_draw && light is SunLight)
-                //    debug.NewVector(p, L);
-#endif
-                // shadow confirm
-                var newray = new Beam(L, p);
-                var in_shadow = false;
-                foreach(var obj in scene.meshObjectList) {
-                    if (obj.HaveIntersection(newray, light.GetDistance(p))) {
-                        in_shadow = true;
-                        break;
-                    }
-                }
-                if (in_shadow) continue;    // if in shadow, skip this light
-
-                // calc diffuse
-                var V =-ray.direction;
-                var LN = L * normal;
-                if (LN < 0) continue;
-                result = result + (light.GetColor(p) * diffuse_color * LN);
-
-                V.SetUnit();
-                var H = L + V;
-                H.SetUnit();
-
-                // calc specular
-                var HN = H * normal;
-                if (HN < 0) continue;
-                result = result + (light.GetColor(p) * material.specular *
-                    Math.Pow(HN, material.specularN));
-            }
-
-            return result;
         }
 
         public void GetWeight(Point3D p, out double w1, out double w2, out double w3) {

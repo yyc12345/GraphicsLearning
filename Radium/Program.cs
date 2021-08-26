@@ -21,8 +21,10 @@ namespace Radium {
                 return;
             }
 
+            var progress = new Radium.Utils.Progressbar();
             var scene = new RayTracing.Scene(args[0]);
             scene.Render(imageWidth);
+            progress.Finish();
 
             Console.WriteLine("OK!");
             return;

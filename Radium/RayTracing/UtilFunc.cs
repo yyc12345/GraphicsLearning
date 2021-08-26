@@ -17,7 +17,7 @@ namespace Radium.RayTracing {
 
         public static readonly Color DEFAULT_AMBIENT = new Color(0.2, 0.2, 0.2);
 
-        public static readonly Color DEFAULT_ENVIRONMENT = new Color(0.1, 0.1, 0.1);
+        public static readonly Skybox DEFAULT_ENVIRONMENT = new Skybox();
 
         public static bool CloseBy(double num, double expected) {
             return Math.Abs(num - expected) < TOLERANCE;

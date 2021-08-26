@@ -82,7 +82,7 @@ namespace Radium.RayTracing {
 
         public void Render(UInt32 imgWidth) {
 #if DEBUG
-            var debug = new Radium.Utils.TracingDebug(false);
+            var debug = new Radium.Utils.TracingDebug(true);
             UInt32 debug_counter = 0;
 #endif
 
@@ -153,7 +153,7 @@ namespace Radium.RayTracing {
             Face intersection_face;
 
             if (!GetIntersection(ray, out intersection_t, out intersection_point, out intersection_face)) {
-                return new Color(UtilFunc.DEFAULT_ENVIRONMENT);
+                return UtilFunc.DEFAULT_ENVIRONMENT.GetColor(ray.direction);
             }
 
 #if DEBUG
@@ -163,15 +163,22 @@ namespace Radium.RayTracing {
             //}
 #endif
 
-            // calc local color
+            // calc face weight and normal
+            intersection_face.GetWeight(intersection_point, out double face_w1, out double face_w2, out double face_w3);
 #if DEBUG
-            var local_color = intersection_face.GetLocalColor(ray, intersection_point, this, debug, need_draw);
+            var normal = intersection_face.GetInternalPointNormal(intersection_point, face_w1, face_w2, face_w3, debug, need_draw);
 #else
-            var local_color = intersection_face.GetLocalColor(ray, intersection_point, this);
+            var normal = intersection_face.GetInternalPointNormal(intersection_point, face_w1, face_w2, face_w3);
 #endif
 
-            intersection_face.GetWeight(intersection_point, out double face_w1, out double face_w2, out double face_w3);
-            var normal = intersection_face.GetInternalPointNormal(intersection_point, face_w1, face_w2, face_w3);
+            // calc local color
+#if DEBUG
+            var local_color = GetLocalColor(intersection_face, ray, intersection_point, normal, face_w1, face_w2, face_w3, debug, need_draw);
+#else
+            var local_color = GetLocalColor(intersection_face, ray, intersection_point, normal, face_w1, face_w2, face_w3);
+#endif
+
+            // camera view direction
             var v = -ray.direction;
             // calc kr
             Color rColor = null;
@@ -261,5 +268,58 @@ namespace Radium.RayTracing {
 
             return haveIntersection;
         }
+
+
+#if DEBUG
+        public Color GetLocalColor(Face f, Beam ray, Point3D p, Vector3D normal, double w1, double w2, double w3, Radium.Utils.TracingDebug debug, bool need_draw) {
+#else
+        public Color GetLocalColor(Face f, Beam ray, Point3D p, Vector3D normal, double w1, double w2, double w3) {
+#endif
+            // ambient
+            var result = f.material.ambient * UtilFunc.DEFAULT_AMBIENT;
+            // diffuse color
+            var diffuse_color = f.GetDiffuse(p, w1, w2, w3);
+
+#if DEBUG
+            if (need_draw)
+                debug.NewVector(p, normal);
+#endif
+
+            // for each light, calc diffuse and specular
+            foreach (var light in lightList) {
+                var L = light.GetDirectionFromPointToSource(p);
+
+                // shadow confirm
+                var newray = new Beam(L, p);
+                var in_shadow = false;
+                foreach (var obj in meshObjectList) {
+                    if (obj.HaveIntersection(newray, light.GetDistance(p))) {
+                        in_shadow = true;
+                        break;
+                    }
+                }
+                if (in_shadow) continue;    // if in shadow, skip this light
+
+                // calc diffuse
+                var V = -ray.direction;
+                var LN = L * normal;
+                if (LN < 0) continue;
+                result = result + (light.GetColor(p) * diffuse_color * LN);
+
+                V.SetUnit();
+                var H = L + V;
+                H.SetUnit();
+
+                // calc specular
+                var HN = H * normal;
+                if (HN < 0) continue;
+                result = result + (light.GetColor(p) * f.material.specular *
+                    Math.Pow(HN, f.material.specularN));
+            }
+
+            return result;
+        }
+
+
     }
 }
