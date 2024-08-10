@@ -1,0 +1,4 @@
+# Image should be treated as binary
+*.png       binary
+*.jpg       binary
+*.bmp       binary

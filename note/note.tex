@@ -1,0 +1,34 @@
+\documentclass[10pt, a4paper, oneside]{ctexart}
+% Package for page size
+ \usepackage{geometry}
+% Package float will allow figure and table float (not arranged by latex)
+\usepackage{float}
+% Support inserting image
+\usepackage{graphicx}
+ % convenient math package
+ \usepackage{amsmath}
+ 
+ % Set page size
+ \geometry{a4paper}
+ \geometry{top=2.54cm,bottom=2.54cm,left=3.17cm,right=3.17cm}
+ 
+\begin{document}
+
+ % Cover page
+\title{计算机图形学学习笔记}
+\author{yyc12345著\\您被迫校对}
+\date{2021年}
+\maketitle
+\newpage
+ 
+% Content page
+\tableofcontents
+\newpage
+
+% Start main body
+
+% Section 1 - Notational Conventions in this Document
+\input{liang-barsky.tex}
+\newpage
+
+\end{document}
