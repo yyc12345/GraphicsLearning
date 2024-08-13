@@ -15,5 +15,5 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/custom_import_stb.cmake)
 
 # Import build targets
 add_subdirectory(shared)
-add_subdirectory(plumbum)
+#add_subdirectory(plumbum)
 #add_subdirectory(radium)

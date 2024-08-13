@@ -4,7 +4,8 @@ add_library(YYCGShared STATIC "")
 target_sources(YYCGShared
 PRIVATE
     # Sources
-    YYCGImage.hpp
+    stbImpls.cpp
+    YYCGImage.cpp
 )
 # Setup header files
 target_sources(YYCGShared
@@ -12,7 +13,7 @@ PUBLIC
 FILE_SET HEADERS
 FILES
     # Headers
-    YYCGImage.cpp
+    YYCGImage.hpp
 )
 # Setup include directory
 target_include_directories(YYCGShared
